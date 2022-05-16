@@ -2,26 +2,23 @@ import { Effect } from "./Effect"
 import { Observable, Subscriber } from "rxjs"
 import { EffectObservable } from "EffectObservable"
 
-const internal = Symbol("")
-type Internal = typeof internal
-
-export function liftEffects<L = Internal>(): <T, E = Internal>(
+export function liftEffects<L>(): <T, E>(
   source$: EffectObservable<T, E>,
 ) => EffectObservable<
-  E extends Internal
-    ? T | (L extends Internal ? unknown : L)
-    : T | (L extends Internal ? E : E | L),
+  unknown extends E
+    ? T | (unknown extends L ? unknown : L)
+    : T | (unknown extends L ? E : E | L),
   never
 >
 export function liftEffects<Args extends Array<any>>(
   ...args: Args
-): <T, E = Internal>(
+): <T, E>(
   source$: EffectObservable<T, E>,
 ) => EffectObservable<
-  E extends Internal
+  unknown extends E
     ? T | Args[keyof Args extends number ? keyof Args : never]
     : T | (Args[keyof Args extends number ? keyof Args : never] & E),
-  E extends Internal
+  unknown extends E
     ? never
     : Exclude<E, Args[keyof Args extends number ? keyof Args : never]>
 >
@@ -29,11 +26,11 @@ export function liftEffects<Args extends Array<any>>(
 export function liftEffects<Args extends Array<any>>(...args: Args) {
   type UnionArgTypes = Args[keyof Args extends number ? keyof Args : never]
   const toInclude = new Set(args)
-  return <T, E = Internal>(
+  return <T, E>(
     source$: EffectObservable<T, E>,
   ): EffectObservable<
-    E extends Internal ? T | UnionArgTypes : T | (UnionArgTypes & E),
-    E extends Internal ? never : Exclude<E, UnionArgTypes>
+    unknown extends E ? T | UnionArgTypes : T | (UnionArgTypes & E),
+    unknown extends E ? never : Exclude<E, UnionArgTypes>
   > => {
     return new Observable((observer) => {
       let subscriber: Subscriber<any>

@@ -2,18 +2,15 @@ import { effect } from "./Effect"
 import { Observable, Subscriber } from "rxjs"
 import { EffectObservable } from "./EffectObservable"
 
-const internal = Symbol("")
-type Internal = typeof internal
-
 type SubscriberWithInner<T> = Subscriber<T> & { inner: Subscriber<any> }
 export const sinkEffects = <Args extends Array<any>>(...args: Args) => {
   type UnionArgTypes = Args[keyof Args extends number ? keyof Args : never]
   const toExclude = new Set(args)
-  return <T, E = Internal>(
+  return <T, E = never>(
     source$: EffectObservable<T, E>,
   ): EffectObservable<
     Exclude<T, UnionArgTypes>,
-    E extends Internal ? UnionArgTypes : UnionArgTypes | E
+    never extends E ? UnionArgTypes : UnionArgTypes | E
   > => {
     let waiting: SubscriberWithInner<any> | null = null
 
