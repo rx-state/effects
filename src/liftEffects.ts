@@ -1,26 +1,23 @@
 import { Effect } from "./Effect"
-import { Observable, Subscriber } from "rxjs"
-import { EffectObservable } from "EffectObservable"
+import { map, Observable, Subscriber } from "rxjs"
+import { EffectObservable } from "./EffectObservable"
+import { sinkEffects } from "sinkEffects"
 
-export function liftEffects<L>(): <T, E>(
+type IsEmpty<T> = unknown extends T ? true : T extends never ? true : false
+
+export function liftEffects(): <T, E>( // Not sure why was `L` needed - Tried different stuff and it all works ok
   source$: EffectObservable<T, E>,
-) => EffectObservable<
-  unknown extends E
-    ? T | (unknown extends L ? unknown : L)
-    : T | (unknown extends L ? E : E | L),
-  never
->
-export function liftEffects<Args extends Array<any>>(
+) => EffectObservable<IsEmpty<E> extends true ? T : T | E, never>
+export function liftEffects<Args extends Array<unknown>>(
   ...args: Args
 ): <T, E>(
   source$: EffectObservable<T, E>,
 ) => EffectObservable<
-  unknown extends E
-    ? T | Args[keyof Args extends number ? keyof Args : never]
-    : T | (Args[keyof Args extends number ? keyof Args : never] & E),
-  unknown extends E
-    ? never
-    : Exclude<E, Args[keyof Args extends number ? keyof Args : never]>
+  | T
+  | (IsEmpty<E> extends true
+      ? Args[keyof Args & number] // simplified from [keyof Args extends number ? keyof Args : never]
+      : E & Args[keyof Args & number]),
+  IsEmpty<E> extends true ? never : Exclude<E, Args[keyof Args & number]>
 >
 
 export function liftEffects<Args extends Array<any>>(...args: Args) {
@@ -64,3 +61,10 @@ export function liftEffects<Args extends Array<any>>(...args: Args) {
     })
   }
 }
+
+const obs: EffectObservable<null | 1 | 2 | 3, never> = null as any
+const r = obs.pipe(
+  sinkEffects(null),
+  map((v) => (v + 1) as 2 | 3 | 4),
+  liftEffects(),
+)
